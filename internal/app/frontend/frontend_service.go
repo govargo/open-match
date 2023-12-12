@@ -20,7 +20,6 @@ import (
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -28,6 +27,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"open-match.dev/open-match/internal/config"
 	"open-match.dev/open-match/internal/statestore"
+	"open-match.dev/open-match/internal/telemetry"
 	"open-match.dev/open-match/pkg/pb"
 )
 
@@ -248,7 +248,7 @@ func doDeleteTicket(ctx context.Context, id string, store statestore.Service) er
 	//'lazy' ticket delete that should be called after a ticket
 	// has been deindexed.
 	go func() {
-		ctx, span := trace.StartSpan(context.Background(), "open-match/frontend.DeleteTicketLazy")
+		ctx, span := telemetry.DefaultTracer.Start(ctx, "open-match/frontend.DeleteTicketLazy")
 		defer span.End()
 		err := store.DeleteTicket(ctx, id)
 		if err != nil {

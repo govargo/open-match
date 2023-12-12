@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 	"open-match.dev/open-match/examples/scale/scenarios"
 	"open-match.dev/open-match/internal/appmain"
 	"open-match.dev/open-match/internal/config"
@@ -125,7 +124,7 @@ func run(cfg config.View) {
 }
 
 func runFetchMatches(be pb.BackendServiceClient, p *pb.MatchProfile, matchesToAssign chan<- *pb.Match, matchesToAcknowledge chan<- *pb.Match) {
-	ctx, span := trace.StartSpan(context.Background(), "scale.backend/FetchMatches")
+	ctx, span := telemetry.DefaultTracer.Start(context.TODO(), "scale.backend/FetchMatches")
 	defer span.End()
 
 	req := &pb.FetchMatchesRequest{
@@ -209,7 +208,7 @@ func runAcknowledgeBackfills(fe pb.FrontendServiceClient, matchesToAcknowledge <
 }
 
 func acknowledgeBackfill(fe pb.FrontendServiceClient, backfillId string) error {
-	ctx, span := trace.StartSpan(context.Background(), "scale.frontend/AcknowledgeBackfill")
+	ctx, span := telemetry.DefaultTracer.Start(context.TODO(), "scale.frontend/AcknowledgeBackfill")
 	defer span.End()
 
 	_, err := fe.AcknowledgeBackfill(ctx, &pb.AcknowledgeBackfillRequest{

@@ -26,15 +26,13 @@ import (
 	"strings"
 	"time"
 
-	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	"go.opencensus.io/plugin/ocgrpc"
-
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_tracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
-
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/plugin/ochttp"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -133,9 +131,9 @@ func GRPCClientFromEndpoint(cfg config.View, address string) (*grpc.ClientConn, 
 		}
 		tc := credentials.NewClientTLSFromCert(pool, "")
 
-		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(tc))
+		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(tc), grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	} else {
-		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	}
 
 	return grpc.Dial(address, grpcOptions...)
@@ -151,9 +149,9 @@ func GRPCClientFromParams(params *ClientParams) (*grpc.ClientConn, error) {
 			clientLogger.WithError(err).Error("failed to get transport credentials from file.")
 			return nil, errors.WithStack(err)
 		}
-		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(trustedCertPool, "")))
+		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(trustedCertPool, "")), grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	} else {
-		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	}
 
 	return grpc.Dial(params.Address, grpcOptions...)
@@ -275,9 +273,7 @@ func HTTPClientFromParams(params *ClientParams) (*http.Client, string, error) {
 
 	if params.EnableMetrics {
 		attachTransport(httpClient, func(transport http.RoundTripper) http.RoundTripper {
-			return &ochttp.Transport{
-				Base: transport,
-			}
+			return otelhttp.NewTransport(transport)
 		})
 	}
 
@@ -319,7 +315,7 @@ func newGRPCDialOptions(enableMetrics bool, enableRPCLogging bool, enableRPCPayl
 		}),
 	}
 	if enableMetrics {
-		opts = append(opts, grpc.WithStatsHandler(new(ocgrpc.ClientHandler)))
+		opts = append(opts, grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	}
 	return opts
 }

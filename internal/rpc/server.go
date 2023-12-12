@@ -31,9 +31,8 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/plugin/ocgrpc"
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/plugin/ochttp/propagation/b3"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"open-match.dev/open-match/internal/config"
@@ -244,10 +243,7 @@ func (l *loggingHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request)
 
 func instrumentHTTPHandler(handler http.Handler, params *ServerParams) http.Handler {
 	if params.enableMetrics {
-		handler = &ochttp.Handler{
-			Handler:     handler,
-			Propagation: &b3.HTTPFormat{},
-		}
+		handler = otelhttp.NewHandler(handler, "server")
 	}
 	if params.enableRPCLogging {
 		handler = &loggingHTTPHandler{
@@ -270,6 +266,7 @@ func newGRPCServerOptions(params *ServerParams) []grpc.ServerOption {
 		grpc_validator.UnaryServerInterceptor(),
 		grpc_tracing.UnaryServerInterceptor(),
 	}
+
 	if params.enableRPCLogging {
 		grpcLogger := logrus.WithFields(logrus.Fields{
 			"app":       "openmatch",
@@ -292,7 +289,7 @@ func newGRPCServerOptions(params *ServerParams) []grpc.ServerOption {
 	si = append(si, serverStreamInterceptor)
 
 	if params.enableMetrics {
-		opts = append(opts, grpc.StatsHandler(&ocgrpc.ServerHandler{}))
+		opts = append(opts, grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	}
 
 	return append(opts,

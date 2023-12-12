@@ -21,7 +21,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/trace"
 	"open-match.dev/open-match/internal/config"
 )
 
@@ -57,13 +56,6 @@ func Setup(p Params, b Bindings) error {
 func configureOpenCensus(p Params, b Bindings) error {
 	// There's no way to undo these options, but the next startup will override
 	// them.
-
-	samplingFraction := p.Config().GetFloat64("telemetry.traceSamplingFraction")
-	logger.WithFields(logrus.Fields{
-		"samplingFraction": samplingFraction,
-	}).Info("Tracing sampler fraction set")
-	trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(samplingFraction)})
-
 	periodString := p.Config().GetString("telemetry.reportingPeriod")
 	reportingPeriod, err := time.ParseDuration(periodString)
 	if err != nil {
