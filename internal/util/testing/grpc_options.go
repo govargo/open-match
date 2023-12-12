@@ -23,6 +23,8 @@ import (
 	grpc_tracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
@@ -52,6 +54,7 @@ func NewGRPCDialOptions(grpcLogger *logrus.Entry) []grpc.DialOption {
 	}
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 		grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(si...)),
 		grpc.WithUnaryInterceptor(grpc_middleware.ChainUnaryClient(ui...)),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
@@ -78,6 +81,7 @@ func NewGRPCServerOptions(grpcLogger *logrus.Entry) []grpc.ServerOption {
 		grpc_validator.UnaryServerInterceptor(),
 		grpc_tracing.UnaryServerInterceptor(),
 		grpc_logrus.UnaryServerInterceptor(grpcLogger),
+		otelgrpc.UnaryServerInterceptor(otelgrpc.WithInterceptorFilter(filters.Not(filters.HealthCheck()))),
 	}
 
 	return []grpc.ServerOption{

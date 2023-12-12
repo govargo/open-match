@@ -15,11 +15,26 @@
 package telemetry
 
 import (
+	"context"
+
 	"contrib.go.opencensus.io/exporter/stackdriver"
+	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/contrib/detectors/gcp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+
+	gcppropagator "github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator"
+
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+)
+
+var (
+	DefaultTracer = otel.GetTracerProvider().Tracer("github.com/govargo/open-match")
 )
 
 func bindStackDriverMetrics(p Params, b Bindings) error {
@@ -31,6 +46,7 @@ func bindStackDriverMetrics(p Params, b Bindings) error {
 	}
 	gcpProjectID := cfg.GetString("telemetry.stackdriverMetrics.gcpProjectId")
 	metricPrefix := cfg.GetString("telemetry.stackdriverMetrics.prefix")
+	samplingFraction := p.Config().GetFloat64("telemetry.traceSamplingFraction")
 
 	logger.WithFields(logrus.Fields{
 		"gcpProjectID": gcpProjectID,
@@ -47,13 +63,56 @@ func bindStackDriverMetrics(p Params, b Bindings) error {
 	}
 
 	view.RegisterExporter(sd)
-	trace.RegisterExporter(sd)
+
+	// OpenTelemetry setting
+	exporter, err := texporter.New(texporter.WithProjectID(gcpProjectID))
+	if err != nil {
+		return errors.Wrap(err, "Failed to crete new texporter")
+	}
+	ctx := context.TODO()
+	res, err := resource.New(ctx,
+		// Use the GCP resource detector to detect information about the GCP platform
+		resource.WithDetectors(gcp.NewDetector()),
+		// Keep the default detectors
+		resource.WithTelemetrySDK(),
+		// Add your own custom attributes to identify your application
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String("open-match"),
+			semconv.ServiceNamespaceKey.String("open-match"),
+		),
+	)
+	if err != nil {
+		return errors.Wrap(err, "Failed to crete new resource")
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(res),
+		sdktrace.WithSampler(sdktrace.ParentBased(sdktrace.TraceIDRatioBased(samplingFraction))),
+	)
+	otel.SetTextMapPropagator(
+		propagation.NewCompositeTextMapPropagator(
+			// Putting the CloudTraceFormatPropagator first means the TraceContext propagator
+			// takes precedence if both the traceparent and the XCTC headers exist.
+			gcppropagator.CloudTraceFormatPropagator{},
+			propagation.TraceContext{},
+			propagation.Baggage{},
+		))
+	otel.SetTracerProvider(tp)
+
+	logger.WithFields(logrus.Fields{
+		"gcpProjectID":     gcpProjectID,
+		"samplingFraction": samplingFraction,
+	}).Info("Cloud Trace: ENABLED")
 
 	b.AddCloser(func() {
 		view.UnregisterExporter(sd)
-		trace.UnregisterExporter(sd)
 		// It is imperative to invoke flush before your main function exits
 		sd.Flush()
+		err = tp.ForceFlush(ctx)
+		if err != nil {
+			logger.Errorf("Failed to flush trace provider: %s", err.Error())
+		}
 	})
 
 	return nil

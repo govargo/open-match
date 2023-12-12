@@ -19,7 +19,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/trace"
 )
 
 func bindOpenCensusAgent(p Params, b Bindings) error {
@@ -40,12 +39,10 @@ func bindOpenCensusAgent(p Params, b Bindings) error {
 		return errors.Wrap(err, "Failed to create a new ocagent exporter")
 	}
 
-	trace.RegisterExporter(oce)
 	view.RegisterExporter(oce)
 
 	b.AddCloserErr(func() error {
 		view.UnregisterExporter(oce)
-		trace.UnregisterExporter(oce)
 		// Before the program stops, please remember to stop the exporter.
 		return oce.Stop()
 	})

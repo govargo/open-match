@@ -22,7 +22,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 	"open-match.dev/open-match/examples/scale/scenarios"
 	"open-match.dev/open-match/internal/appmain"
 	"open-match.dev/open-match/internal/config"
@@ -126,7 +125,7 @@ func runner(fe pb.FrontendServiceClient) {
 }
 
 func createTicket(ctx context.Context, fe pb.FrontendServiceClient) (string, error) {
-	ctx, span := trace.StartSpan(ctx, "scale.frontend/CreateTicket")
+	ctx, span := telemetry.DefaultTracer.Start(context.TODO(), "scale.frontend/CreateTicket")
 	defer span.End()
 
 	req := &pb.CreateTicketRequest{
@@ -176,7 +175,7 @@ func createBackfills(fe pb.FrontendServiceClient, numBackfillsToCreate int) erro
 }
 
 func createBackfill(fe pb.FrontendServiceClient) error {
-	ctx, span := trace.StartSpan(context.Background(), "scale.frontend/CreateBackfill")
+	ctx, span := telemetry.DefaultTracer.Start(context.TODO(), "scale.frontend/CreateBackfill")
 	defer span.End()
 
 	req := pb.CreateBackfillRequest{
