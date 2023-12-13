@@ -33,6 +33,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/filters"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"open-match.dev/open-match/internal/config"
@@ -243,7 +244,17 @@ func (l *loggingHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request)
 
 func instrumentHTTPHandler(handler http.Handler, params *ServerParams) http.Handler {
 	if params.enableMetrics {
-		handler = otelhttp.NewHandler(handler, "server")
+		handler = otelhttp.NewHandler(handler, "httpServer",
+			otelhttp.WithMessageEvents(otelhttp.ReadEvents, otelhttp.WriteEvents),
+			otelhttp.WithFilter(
+				filters.All(
+					// ignore healthcheck endpoints
+					filters.Not(filters.Path("/")),
+					filters.Not(filters.Path("/healthz")),
+					filters.Not(filters.Path("/readiness")),
+				),
+			),
+		)
 	}
 	if params.enableRPCLogging {
 		handler = &loggingHTTPHandler{
