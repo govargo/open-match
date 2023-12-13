@@ -15,6 +15,7 @@
 package rpc
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -101,9 +102,10 @@ func runTestStartStopTLSServer(t *testing.T, tp *tlsServerTestParams) {
 
 	serverParams.SetTLSConfiguration(tp.rootPublicCertificateFileData, tp.publicCertificateFileData, tp.privateKeyFileData)
 	s := newTLSServer(serverParams.grpcListener, serverParams.grpcProxyListener)
-	defer s.stop()
+	ctx := context.Background()
+	defer s.stop(ctx)
 
-	err := s.start(serverParams)
+	err := s.start(ctx, serverParams)
 	require.Nil(err)
 
 	pool, err := trustedCertificateFromFileData(tp.rootPublicCertificateFileData)

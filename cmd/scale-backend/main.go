@@ -15,10 +15,13 @@
 package main
 
 import (
+	"context"
+
 	"open-match.dev/open-match/examples/scale/backend"
 	"open-match.dev/open-match/internal/appmain"
 )
 
 func main() {
-	appmain.RunApplication("scale", backend.BindService)
+	ctx := context.Background()
+	appmain.RunApplication(ctx, "scale", backend.BindService)
 }

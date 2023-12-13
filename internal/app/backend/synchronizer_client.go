@@ -12,9 +12,9 @@ type synchronizerClient struct {
 	cacher *config.Cacher
 }
 
-func newSynchronizerClient(cfg config.View) *synchronizerClient {
+func newSynchronizerClient(ctx context.Context, cfg config.View) *synchronizerClient {
 	newInstance := func(cfg config.View) (interface{}, func(), error) {
-		conn, err := rpc.GRPCClientFromConfig(cfg, "api.synchronizer")
+		conn, err := rpc.GRPCClientFromConfig(ctx, cfg, "api.synchronizer")
 		if err != nil {
 			return nil, nil, err
 		}

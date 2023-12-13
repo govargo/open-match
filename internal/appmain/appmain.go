@@ -41,7 +41,7 @@ var (
 
 // RunApplication starts and runs the given application forever.  For use in
 // main functions to run the full application.
-func RunApplication(serviceName string, bindService Bind) {
+func RunApplication(ctx context.Context, serviceName string, bindService Bind) {
 	c := make(chan os.Signal, 1)
 	// SIGTERM is signaled by k8s when it wants a pod to stop.
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
@@ -50,13 +50,13 @@ func RunApplication(serviceName string, bindService Bind) {
 		return config.Read()
 	}
 
-	a, err := NewApplication(serviceName, bindService, readConfig, net.Listen)
+	a, err := NewApplication(ctx, serviceName, bindService, readConfig, net.Listen)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
 	<-c
-	err = a.Stop()
+	err = a.Stop(ctx)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func RunApplication(serviceName string, bindService Bind) {
 }
 
 // Bind is a function which starts an application, and binds it to serving.
-type Bind func(p *Params, b *Bindings) error
+type Bind func(ctx context.Context, p *Params, b *Bindings) error
 
 // Params are inputs to starting an application.
 type Params struct {
@@ -85,6 +85,7 @@ func (p *Params) ServiceName() string {
 
 // Bindings allows applications to bind various functions to the running servers.
 type Bindings struct {
+	ctx      context.Context
 	sp       *rpc.ServerParams
 	a        *App
 	firstErr error
@@ -105,7 +106,7 @@ func (b *Bindings) RegisterViews(v ...*view.View) {
 		return
 	}
 
-	b.AddCloser(func() {
+	b.AddCloser(func(_ context.Context) {
 		view.Unregister(v...)
 	})
 }
@@ -127,9 +128,9 @@ func (b *Bindings) TelemetryHandleFunc(pattern string, handler func(http.Respons
 
 // AddCloser specifies a function to be called when the application is being
 // stopped.  Closers are called in reverse order.
-func (b *Bindings) AddCloser(c func()) {
-	b.a.closers = append(b.a.closers, func() error {
-		c()
+func (b *Bindings) AddCloser(c func(context.Context)) {
+	b.a.closers = append(b.a.closers, func(ctx context.Context) error {
+		c(ctx)
 		return nil
 	})
 }
@@ -137,17 +138,17 @@ func (b *Bindings) AddCloser(c func()) {
 // AddCloserErr specifies a function to be called when the application is being
 // stopped.  Closers are called in reverse order.  The first error returned by
 // a closer will be logged.
-func (b *Bindings) AddCloserErr(c func() error) {
+func (b *Bindings) AddCloserErr(c func(ctx context.Context) error) {
 	b.a.closers = append(b.a.closers, c)
 }
 
 // App is used internally, and public only for apptest.  Do not use, and use apptest instead.
 type App struct {
-	closers []func() error
+	closers []func(ctx context.Context) error
 }
 
 // NewApplication is used internally, and public only for apptest.  Do not use, and use apptest instead.
-func NewApplication(serviceName string, bindService Bind, getCfg func() (config.View, error), listen func(network, address string) (net.Listener, error)) (*App, error) {
+func NewApplication(ctx context.Context, serviceName string, bindService Bind, getCfg func() (config.View, error), listen func(network, address string) (net.Listener, error)) (*App, error) {
 	a := &App{}
 
 	cfg, err := getCfg()
@@ -175,43 +176,47 @@ func NewApplication(serviceName string, bindService Bind, getCfg func() (config.
 
 	err = telemetry.Setup(p, b)
 	if err != nil {
-		surpressedErr := a.Stop() // Don't care about additional errors stopping.
+		surpressedErr := a.Stop(ctx) // Don't care about additional errors stopping.
 		_ = surpressedErr
 		return nil, err
 	}
 
-	err = bindService(p, b)
+	err = bindService(ctx, p, b)
 	if err != nil {
-		surpressedErr := a.Stop() // Don't care about additional errors stopping.
+		surpressedErr := a.Stop(ctx) // Don't care about additional errors stopping.
 		_ = surpressedErr
 		return nil, err
 	}
 	if b.firstErr != nil {
-		surpressedErr := a.Stop() // Don't care about additional errors stopping.
+		surpressedErr := a.Stop(ctx) // Don't care about additional errors stopping.
 		_ = surpressedErr
 		return nil, b.firstErr
 	}
 
 	s := &rpc.Server{}
-	err = s.Start(sp)
+	err = s.Start(ctx, sp)
 	if err != nil {
-		surpressedErr := a.Stop() // Don't care about additional errors stopping.
+		surpressedErr := a.Stop(ctx) // Don't care about additional errors stopping.
 		_ = surpressedErr
 		return nil, err
 	}
-	b.AddCloserErr(s.Stop)
+
+	b.AddCloserErr(func(ctx context.Context) error {
+		err = s.Stop(ctx)
+		return err
+	})
 
 	return a, nil
 }
 
 // Stop is used internally, and public only for apptest.  Do not use, and use apptest instead.
-func (a *App) Stop() error {
+func (a *App) Stop(ctx context.Context) error {
 	// Use closers in reverse order: Since dependencies are created before
 	// their dependants, this helps ensure no dependencies are closed
 	// unexpectedly.
 	var firstErr error
 	for i := len(a.closers) - 1; i >= 0; i-- {
-		err := a.closers[i]()
+		err := a.closers[i](ctx)
 		if firstErr == nil {
 			firstErr = err
 		}

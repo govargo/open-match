@@ -16,6 +16,7 @@ package frontend
 
 import (
 	"context"
+	"time"
 
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
@@ -171,9 +172,11 @@ func (s *frontendService) UpdateBackfill(ctx context.Context, req *pb.UpdateBack
 		return nil, err
 	}
 	defer func() {
-		if _, err = m.Unlock(context.Background()); err != nil {
+		timeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+		if _, err = m.Unlock(timeout); err != nil {
 			logger.WithError(err).Error("error on mutex unlock")
 		}
+		cancel()
 	}()
 	bfStored, associatedTickets, err := s.store.GetBackfill(ctx, bfID)
 	if err != nil {
@@ -332,9 +335,11 @@ func (s *frontendService) AcknowledgeBackfill(ctx context.Context, req *pb.Ackno
 		return nil, err
 	}
 	defer func() {
-		if _, err = m.Unlock(context.Background()); err != nil {
+		timeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+		if _, err = m.Unlock(timeout); err != nil {
 			logger.WithError(err).Error("error on mutex unlock")
 		}
+		cancel()
 	}()
 
 	bf, associatedTickets, err := s.store.GetBackfill(ctx, req.GetBackfillId())

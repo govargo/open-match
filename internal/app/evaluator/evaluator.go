@@ -16,6 +16,8 @@
 package evaluator
 
 import (
+	"context"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"google.golang.org/grpc"
@@ -44,7 +46,7 @@ var (
 
 // BindServiceFor creates the evaluator service and binds it to the serving harness.
 func BindServiceFor(eval Evaluator) appmain.Bind {
-	return func(p *appmain.Params, b *appmain.Bindings) error {
+	return func(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
 		b.AddHandleFunc(func(s *grpc.Server) {
 			pb.RegisterEvaluatorServer(s, &evaluatorService{evaluate: eval})
 		}, pb.RegisterEvaluatorHandlerFromEndpoint)

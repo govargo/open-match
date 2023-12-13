@@ -16,6 +16,8 @@
 package mmf
 
 import (
+	"context"
+
 	"google.golang.org/grpc"
 	"open-match.dev/open-match/internal/appmain"
 	"open-match.dev/open-match/pkg/pb"
@@ -23,7 +25,7 @@ import (
 
 // BindServiceFor creates the match function service and binds it to the serving harness.
 func BindServiceFor(mmf MatchFunction) appmain.Bind {
-	return func(p *appmain.Params, b *appmain.Bindings) error {
+	return func(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
 		service := &matchFunctionService{
 			mmf: mmf,
 		}

@@ -15,6 +15,8 @@
 package frontend
 
 import (
+	"context"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"google.golang.org/grpc"
@@ -57,7 +59,7 @@ var (
 )
 
 // BindService creates the frontend service and binds it to the serving harness.
-func BindService(p *appmain.Params, b *appmain.Bindings) error {
+func BindService(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
 	service := &frontendService{
 		cfg:   p.Config(),
 		store: statestore.New(p.Config()),

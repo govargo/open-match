@@ -15,10 +15,13 @@
 package main
 
 import (
+	"context"
+
 	"open-match.dev/open-match/internal/app/evaluator/defaulteval"
 	"open-match.dev/open-match/internal/appmain"
 )
 
 func main() {
-	appmain.RunApplication("evaluator", defaulteval.BindService)
+	ctx := context.Background()
+	appmain.RunApplication(ctx, "evaluator", defaulteval.BindService)
 }

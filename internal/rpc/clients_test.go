@@ -15,6 +15,7 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -116,14 +117,15 @@ func setupClientConnection(t *testing.T, require *require.Assertions, cfg config
 	}, pb.RegisterFrontendServiceHandlerFromEndpoint)
 
 	s := &Server{}
+	ctx := context.Background()
 	t.Cleanup(func() {
-		defer s.Stop()
+		defer s.Stop(ctx)
 	})
-	err := s.Start(rpcParams)
+	err := s.Start(ctx, rpcParams)
 	require.Nil(err)
 
 	// Acquire grpc client
-	grpcConn, err := GRPCClientFromConfig(cfg, "test")
+	grpcConn, err := GRPCClientFromConfig(context.TODO(), cfg, "test")
 	require.Nil(err)
 	require.NotNil(grpcConn)
 	return grpcConn
@@ -161,8 +163,9 @@ func runHTTPClientTests(require *require.Assertions, cfg config.View, rpcParams 
 		pb.RegisterFrontendServiceServer(s, ff)
 	}, pb.RegisterFrontendServiceHandlerFromEndpoint)
 	s := &Server{}
-	defer s.Stop()
-	err := s.Start(rpcParams)
+	ctx := context.Background()
+	defer s.Stop(ctx)
+	err := s.Start(ctx, rpcParams)
 	require.Nil(err)
 
 	// Acquire http client

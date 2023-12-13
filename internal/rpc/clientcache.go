@@ -15,6 +15,7 @@
 package rpc
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
@@ -24,6 +25,7 @@ import (
 
 // ClientCache holds GRPC and HTTP clients based on an address.
 type ClientCache struct {
+	ctx   context.Context
 	cfg   config.View
 	cache *sync.Map
 }
@@ -42,7 +44,7 @@ func (cc *ClientCache) GetGRPC(address string) (*grpc.ClientConn, error) {
 	val, exists := cc.cache.Load(address)
 	c, ok := val.(cachedGRPCClient)
 	if !ok || !exists {
-		conn, err := GRPCClientFromEndpoint(cc.cfg, address)
+		conn, err := GRPCClientFromEndpoint(cc.ctx, cc.cfg, address)
 		if err != nil {
 			return nil, err
 		}
@@ -71,8 +73,9 @@ func (cc *ClientCache) GetHTTP(address string) (*http.Client, string, error) {
 }
 
 // NewClientCache creates a cache with all the clients.
-func NewClientCache(cfg config.View) *ClientCache {
+func NewClientCache(ctx context.Context, cfg config.View) *ClientCache {
 	return &ClientCache{
+		ctx:   ctx,
 		cfg:   cfg,
 		cache: &sync.Map{},
 	}

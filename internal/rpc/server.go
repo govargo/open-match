@@ -202,23 +202,23 @@ type Server struct {
 
 // grpcServerWithProxy this will go away when insecure.go and tls.go are merged into the same server.
 type grpcServerWithProxy interface {
-	start(*ServerParams) error
-	stop() error
+	start(context.Context, *ServerParams) error
+	stop(context.Context) error
 }
 
 // Start the gRPC+HTTP(s) REST server.
-func (s *Server) Start(p *ServerParams) error {
+func (s *Server) Start(ctx context.Context, p *ServerParams) error {
 	if p.usingTLS() {
 		s.serverWithProxy = newTLSServer(p.grpcListener, p.grpcProxyListener)
 	} else {
 		s.serverWithProxy = newInsecureServer(p.grpcListener, p.grpcProxyListener)
 	}
-	return s.serverWithProxy.start(p)
+	return s.serverWithProxy.start(ctx, p)
 }
 
 // Stop the gRPC+HTTP(s) REST server.
-func (s *Server) Stop() error {
-	return s.serverWithProxy.stop()
+func (s *Server) Stop(ctx context.Context) error {
+	return s.serverWithProxy.stop(ctx)
 }
 
 type loggingHTTPHandler struct {

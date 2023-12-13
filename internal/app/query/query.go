@@ -15,6 +15,8 @@
 package query
 
 import (
+	"context"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"google.golang.org/grpc"
@@ -98,12 +100,12 @@ var (
 )
 
 // BindService creates the query service and binds it to the serving harness.
-func BindService(p *appmain.Params, b *appmain.Bindings) error {
+func BindService(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
 	store := statestore.New(p.Config())
 	service := &queryService{
 		cfg: p.Config(),
-		tc:  newTicketCache(b, store),
-		bc:  newBackfillCache(b, store),
+		tc:  newTicketCache(ctx, b, store),
+		bc:  newBackfillCache(ctx, b, store),
 	}
 
 	b.AddHandleFunc(func(s *grpc.Server) {

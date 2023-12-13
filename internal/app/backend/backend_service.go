@@ -388,10 +388,12 @@ func createOrUpdateBackfill(ctx context.Context, backfill *pb.Backfill, ticketId
 	}
 
 	defer func() {
-		_, unlockErr := m.Unlock(context.Background())
+		timeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+		_, unlockErr := m.Unlock(timeout)
 		if unlockErr != nil {
 			logger.WithFields(logrus.Fields{"backfill_id": backfill.Id}).WithError(unlockErr).Error("failed to make unlock")
 		}
+		cancel()
 	}()
 
 	b, ids, err := store.GetBackfill(ctx, backfill.Id)

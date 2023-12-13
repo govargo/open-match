@@ -15,6 +15,8 @@
 package telemetry
 
 import (
+	"context"
+
 	"contrib.go.opencensus.io/exporter/ocagent"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -41,7 +43,7 @@ func bindOpenCensusAgent(p Params, b Bindings) error {
 
 	view.RegisterExporter(oce)
 
-	b.AddCloserErr(func() error {
+	b.AddCloserErr(func(_ context.Context) error {
 		view.UnregisterExporter(oce)
 		// Before the program stops, please remember to stop the exporter.
 		return oce.Stop()

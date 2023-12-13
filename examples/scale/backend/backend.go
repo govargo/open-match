@@ -53,13 +53,14 @@ var (
 
 // Run triggers execution of functions that continuously fetch, assign and
 // delete matches.
-func BindService(p *appmain.Params, b *appmain.Bindings) error {
+func BindService(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
 	go run(p.Config())
 	return nil
 }
 
 func run(cfg config.View) {
-	beConn, err := rpc.GRPCClientFromConfig(cfg, "api.backend")
+	ctx := context.TODO()
+	beConn, err := rpc.GRPCClientFromConfig(ctx, cfg, "api.backend")
 	if err != nil {
 		logger.Fatalf("failed to connect to Open Match Backend, got %v", err)
 	}
@@ -67,7 +68,7 @@ func run(cfg config.View) {
 	defer beConn.Close()
 	be := pb.NewBackendServiceClient(beConn)
 
-	feConn, err := rpc.GRPCClientFromConfig(cfg, "api.frontend")
+	feConn, err := rpc.GRPCClientFromConfig(ctx, cfg, "api.frontend")
 	if err != nil {
 		logger.Fatalf("failed to connect to Open Match Frontend, got %v", err)
 	}

@@ -50,8 +50,8 @@ type matchInp struct {
 }
 
 // BindService define the initialization steps for this evaluator
-func BindService(p *appmain.Params, b *appmain.Bindings) error {
-	if err := evaluator.BindServiceFor(evaluate)(p, b); err != nil {
+func BindService(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
+	if err := evaluator.BindServiceFor(evaluate)(ctx, p, b); err != nil {
 		return err
 	}
 	b.RegisterViews(collidedMatchesPerEvaluateView)
@@ -106,7 +106,7 @@ func evaluate(ctx context.Context, in <-chan *pb.Match, out chan<- string) error
 		d.maybeAdd(m)
 	}
 
-	stats.Record(context.Background(), collidedMatchesPerEvaluate.M(int64(len(matches)-len(d.resultIDs))))
+	stats.Record(ctx, collidedMatchesPerEvaluate.M(int64(len(matches)-len(d.resultIDs))))
 
 	for _, id := range d.resultIDs {
 		out <- id

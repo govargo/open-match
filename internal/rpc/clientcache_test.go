@@ -15,6 +15,7 @@
 package rpc
 
 import (
+	"context"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -29,7 +30,8 @@ const (
 func TestGetGRPC(t *testing.T) {
 	require := require.New(t)
 
-	cc := NewClientCache(viper.New())
+	ctx := context.Background()
+	cc := NewClientCache(ctx, viper.New())
 	client, err := cc.GetGRPC(fakeGRPCAddress)
 	require.Nil(err)
 
@@ -43,7 +45,8 @@ func TestGetGRPC(t *testing.T) {
 func TestGetHTTP(t *testing.T) {
 	require := require.New(t)
 
-	cc := NewClientCache(viper.New())
+	ctx := context.Background()
+	cc := NewClientCache(ctx, viper.New())
 	client, address, err := cc.GetHTTP(fakeHTTPAddress)
 	require.Nil(err)
 	require.Equal(fakeHTTPAddress, address)

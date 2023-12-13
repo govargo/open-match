@@ -16,6 +16,8 @@ package telemetry
 
 // Taken from https://opencensus.io/quickstart/go/metrics/#1
 import (
+	"context"
+
 	ocPrometheus "contrib.go.opencensus.io/exporter/prometheus"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -64,7 +66,7 @@ func bindPrometheus(p Params, b Bindings) error {
 
 	// Register the Prometheus exporters as a stats exporter.
 	view.RegisterExporter(promExporter)
-	b.AddCloser(func() {
+	b.AddCloser(func(_ context.Context) {
 		view.UnregisterExporter(promExporter)
 	})
 

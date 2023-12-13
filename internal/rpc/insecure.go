@@ -37,7 +37,7 @@ type insecureServer struct {
 	httpServer   *http.Server
 }
 
-func (s *insecureServer) start(params *ServerParams) error {
+func (s *insecureServer) start(ctx context.Context, params *ServerParams) error {
 	s.httpMux = params.ServeMux
 	s.proxyMux = runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.HTTPBodyMarshaler{
@@ -70,7 +70,7 @@ func (s *insecureServer) start(params *ServerParams) error {
 
 	// Configure the HTTP proxy server.
 	// Bind gRPC handlers
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 
 	for _, handlerFunc := range params.handlersForGrpcProxy {
 		dialOpts := newGRPCDialOptions(params.enableMetrics, params.enableRPCLogging, params.enableRPCPayloadLogging)
@@ -99,9 +99,9 @@ func (s *insecureServer) start(params *ServerParams) error {
 	return nil
 }
 
-func (s *insecureServer) stop() error {
+func (s *insecureServer) stop(ctx context.Context) error {
 	// the servers also close their respective listeners.
-	err := s.httpServer.Shutdown(context.Background())
+	err := s.httpServer.Shutdown(ctx)
 	s.grpcServer.GracefulStop()
 	return err
 }

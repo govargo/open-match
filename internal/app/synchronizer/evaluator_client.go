@@ -45,11 +45,11 @@ type evaluator interface {
 
 var errNoEvaluatorType = status.Errorf(codes.FailedPrecondition, "unable to determine evaluator type, either api.evaluator.grpcport or api.evaluator.httpport must be specified in the config")
 
-func newEvaluator(cfg config.View) evaluator {
+func newEvaluator(ctx context.Context, cfg config.View) evaluator {
 	newInstance := func(cfg config.View) (interface{}, func(), error) {
 		// grpc is preferred over http.
 		if cfg.IsSet("api.evaluator.grpcport") {
-			return newGrpcEvaluator(cfg)
+			return newGrpcEvaluator(ctx, cfg)
 		}
 		if cfg.IsSet("api.evaluator.httpport") {
 			return newHTTPEvaluator(cfg)
@@ -83,9 +83,9 @@ type grcpEvaluatorClient struct {
 	evaluator pb.EvaluatorClient
 }
 
-func newGrpcEvaluator(cfg config.View) (evaluator, func(), error) {
+func newGrpcEvaluator(ctx context.Context, cfg config.View) (evaluator, func(), error) {
 	grpcAddr := fmt.Sprintf("%s:%d", cfg.GetString("api.evaluator.hostname"), cfg.GetInt64("api.evaluator.grpcport"))
-	conn, err := rpc.GRPCClientFromEndpoint(cfg, grpcAddr)
+	conn, err := rpc.GRPCClientFromEndpoint(ctx, cfg, grpcAddr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create grpc evaluator client: %w", err)
 	}
@@ -95,7 +95,7 @@ func newGrpcEvaluator(cfg config.View) (evaluator, func(), error) {
 	}).Info("Created a GRPC client for evaluator endpoint.")
 
 	close := func() {
-		err := conn.Close()
+		err = conn.Close()
 		if err != nil {
 			logger.WithError(err).Warning("Error closing synchronizer client.")
 		}

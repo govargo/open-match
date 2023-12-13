@@ -15,6 +15,8 @@
 package minimatch
 
 import (
+	"context"
+
 	"open-match.dev/open-match/internal/app/backend"
 	"open-match.dev/open-match/internal/app/frontend"
 	"open-match.dev/open-match/internal/app/query"
@@ -23,20 +25,20 @@ import (
 )
 
 // BindService creates the minimatch service to the server Params.
-func BindService(p *appmain.Params, b *appmain.Bindings) error {
-	if err := backend.BindService(p, b); err != nil {
+func BindService(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
+	if err := backend.BindService(ctx, p, b); err != nil {
 		return err
 	}
 
-	if err := frontend.BindService(p, b); err != nil {
+	if err := frontend.BindService(ctx, p, b); err != nil {
 		return err
 	}
 
-	if err := query.BindService(p, b); err != nil {
+	if err := query.BindService(ctx, p, b); err != nil {
 		return err
 	}
 
-	if err := synchronizer.BindService(p, b); err != nil {
+	if err := synchronizer.BindService(ctx, p, b); err != nil {
 		return err
 	}
 
