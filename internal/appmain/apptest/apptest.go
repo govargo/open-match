@@ -16,6 +16,7 @@
 package apptest
 
 import (
+	"context"
 	"net"
 	"testing"
 
@@ -42,12 +43,13 @@ func TestApp(t *testing.T, cfg config.View, listeners []net.Listener, binds ...a
 		return cfg, nil
 	}
 
-	app, err := appmain.NewApplication(ServiceName, bindAll(binds), getCfg, ls.listen)
+	ctx := context.Background()
+	app, err := appmain.NewApplication(ctx, ServiceName, bindAll(binds), getCfg, ls.listen)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		err := app.Stop()
+		err := app.Stop(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -57,12 +59,13 @@ func TestApp(t *testing.T, cfg config.View, listeners []net.Listener, binds ...a
 // RunInCluster allows for running services during an in cluster e2e test.
 // This is NOT for running the actual code under test, but instead allow running
 // auxiliary services the code under test might call.
-func RunInCluster(binds ...appmain.Bind) (func() error, error) {
+func RunInCluster(binds ...appmain.Bind) (func(ctx context.Context) error, error) {
 	readConfig := func() (config.View, error) {
 		return config.Read()
 	}
 
-	app, err := appmain.NewApplication(ServiceName, bindAll(binds), readConfig, net.Listen)
+	ctx := context.Background()
+	app, err := appmain.NewApplication(ctx, ServiceName, bindAll(binds), readConfig, net.Listen)
 	if err != nil {
 		return nil, err
 	}
@@ -70,9 +73,9 @@ func RunInCluster(binds ...appmain.Bind) (func() error, error) {
 }
 
 func bindAll(binds []appmain.Bind) appmain.Bind {
-	return func(p *appmain.Params, b *appmain.Bindings) error {
+	return func(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
 		for _, bind := range binds {
-			bindErr := bind(p, b)
+			bindErr := bind(ctx, p, b)
 			if bindErr != nil {
 				return bindErr
 			}
@@ -142,7 +145,7 @@ func (ls *listenerStorage) listen(network, address string) (net.Listener, error)
 // immediately fails the test if there is an error, and will also automatically
 // close after the test completes.
 func GRPCClient(t *testing.T, cfg config.View, service string) *grpc.ClientConn {
-	conn, err := rpc.GRPCClientFromConfig(cfg, service)
+	conn, err := rpc.GRPCClientFromConfig(context.Background(), cfg, service)
 	if err != nil {
 		t.Fatal(err)
 	}

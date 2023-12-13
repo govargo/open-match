@@ -15,6 +15,8 @@
 package synchronizer
 
 import (
+	"context"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"google.golang.org/grpc"
@@ -50,9 +52,9 @@ var (
 )
 
 // BindService creates the synchronizer service and binds it to the serving harness.
-func BindService(p *appmain.Params, b *appmain.Bindings) error {
+func BindService(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
 	store := statestore.New(p.Config())
-	service := newSynchronizerService(p.Config(), newEvaluator(p.Config()), store)
+	service := newSynchronizerService(p.Config(), newEvaluator(ctx, p.Config()), store)
 	b.AddHealthCheckFunc(store.HealthCheck)
 	b.AddHandleFunc(func(s *grpc.Server) {
 		ipb.RegisterSynchronizerServer(s, service)

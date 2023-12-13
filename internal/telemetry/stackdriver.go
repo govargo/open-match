@@ -105,7 +105,7 @@ func bindStackDriverMetrics(p Params, b Bindings) error {
 		"samplingFraction": samplingFraction,
 	}).Info("Cloud Trace: ENABLED")
 
-	b.AddCloser(func() {
+	b.AddCloser(func(ctx context.Context) {
 		view.UnregisterExporter(sd)
 		// It is imperative to invoke flush before your main function exits
 		sd.Flush()

@@ -16,10 +16,13 @@
 package main
 
 import (
+	"context"
+
 	"open-match.dev/open-match/internal/app/synchronizer"
 	"open-match.dev/open-match/internal/appmain"
 )
 
 func main() {
-	appmain.RunApplication("synchronizer", synchronizer.BindService)
+	ctx := context.Background()
+	appmain.RunApplication(ctx, "synchronizer", synchronizer.BindService)
 }

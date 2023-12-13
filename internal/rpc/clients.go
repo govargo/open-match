@@ -80,7 +80,7 @@ func (p *ClientParams) usingTLS() bool {
 }
 
 // GRPCClientFromConfig creates a gRPC client connection from a configuration.
-func GRPCClientFromConfig(cfg config.View, prefix string) (*grpc.ClientConn, error) {
+func GRPCClientFromConfig(ctx context.Context, cfg config.View, prefix string) (*grpc.ClientConn, error) {
 	clientParams := &ClientParams{
 		Address:                 toAddress(cfg.GetString(prefix+".hostname"), cfg.GetInt(prefix+".grpcport")),
 		EnableRPCLogging:        cfg.GetBool(ConfigNameEnableRPCLogging),
@@ -103,11 +103,11 @@ func GRPCClientFromConfig(cfg config.View, prefix string) (*grpc.ClientConn, err
 		}
 	}
 
-	return GRPCClientFromParams(clientParams)
+	return GRPCClientFromParams(ctx, clientParams)
 }
 
 // GRPCClientFromEndpoint creates a gRPC client connection from endpoint.
-func GRPCClientFromEndpoint(cfg config.View, address string) (*grpc.ClientConn, error) {
+func GRPCClientFromEndpoint(ctx context.Context, cfg config.View, address string) (*grpc.ClientConn, error) {
 	// TODO: investigate if it is possible to keep a cache of the certpool and transport credentials
 	grpcOptions := newGRPCDialOptions(cfg.GetBool(telemetry.ConfigNameEnableMetrics), cfg.GetBool(ConfigNameEnableRPCLogging), logging.IsDebugEnabled(cfg))
 
@@ -131,16 +131,16 @@ func GRPCClientFromEndpoint(cfg config.View, address string) (*grpc.ClientConn, 
 		}
 		tc := credentials.NewClientTLSFromCert(pool, "")
 
-		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(tc), grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
+		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(tc))
 	} else {
-		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
+		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
-	return grpc.Dial(address, grpcOptions...)
+	return grpc.DialContext(ctx, address, grpcOptions...)
 }
 
 // GRPCClientFromParams creates a gRPC client connection from the parameters.
-func GRPCClientFromParams(params *ClientParams) (*grpc.ClientConn, error) {
+func GRPCClientFromParams(ctx context.Context, params *ClientParams) (*grpc.ClientConn, error) {
 	grpcOptions := newGRPCDialOptions(params.EnableMetrics, params.EnableRPCLogging, params.EnableRPCPayloadLogging)
 
 	if params.usingTLS() {
@@ -154,10 +154,10 @@ func GRPCClientFromParams(params *ClientParams) (*grpc.ClientConn, error) {
 		grpcOptions = append(grpcOptions, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	}
 
-	return grpc.Dial(params.Address, grpcOptions...)
+	return grpc.DialContext(ctx, params.Address, grpcOptions...)
 }
 
-// HTTPClientFromConfig creates a HTTP client from from a configuration.
+// HTTPClientFromConfig creates a HTTP client from a configuration.
 func HTTPClientFromConfig(cfg config.View, prefix string) (*http.Client, string, error) {
 	clientParams := &ClientParams{
 		Address:                 toAddress(cfg.GetString(prefix+".hostname"), cfg.GetInt(prefix+".httpport")),
@@ -315,6 +315,10 @@ func newGRPCDialOptions(enableMetrics bool, enableRPCLogging bool, enableRPCPayl
 		}),
 	}
 	if enableMetrics {
+		logrus.WithFields(logrus.Fields{
+			"app":       "openmatch",
+			"component": "grpc.client",
+		}).Info("OTel gRPC trace: ENABLED")
 		opts = append(opts, grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	}
 	return opts

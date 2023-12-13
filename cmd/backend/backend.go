@@ -16,10 +16,13 @@
 package main
 
 import (
+	"context"
+
 	"open-match.dev/open-match/internal/app/backend"
 	"open-match.dev/open-match/internal/appmain"
 )
 
 func main() {
-	appmain.RunApplication("backend", backend.BindService)
+	ctx := context.Background()
+	appmain.RunApplication(ctx, "backend", backend.BindService)
 }

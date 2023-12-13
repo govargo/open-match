@@ -16,10 +16,13 @@
 package main
 
 import (
+	"context"
+
 	"open-match.dev/open-match/internal/app/query"
 	"open-match.dev/open-match/internal/appmain"
 )
 
 func main() {
-	appmain.RunApplication("query", query.BindService)
+	ctx := context.Background()
+	appmain.RunApplication(ctx, "query", query.BindService)
 }

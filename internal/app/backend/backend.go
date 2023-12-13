@@ -15,6 +15,8 @@
 package backend
 
 import (
+	"context"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"google.golang.org/grpc"
@@ -72,11 +74,11 @@ var (
 )
 
 // BindService creates the backend service and binds it to the serving harness.
-func BindService(p *appmain.Params, b *appmain.Bindings) error {
+func BindService(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
 	service := &backendService{
-		synchronizer: newSynchronizerClient(p.Config()),
+		synchronizer: newSynchronizerClient(ctx, p.Config()),
 		store:        statestore.New(p.Config()),
-		cc:           rpc.NewClientCache(p.Config()),
+		cc:           rpc.NewClientCache(ctx, p.Config()),
 	}
 
 	b.AddHealthCheckFunc(service.store.HealthCheck)

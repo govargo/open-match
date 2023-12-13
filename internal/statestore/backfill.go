@@ -242,9 +242,11 @@ func (rb *redisBackend) DeleteBackfillCompletely(ctx context.Context, id string)
 	}
 
 	defer func() {
-		if _, err = m.Unlock(context.Background()); err != nil {
+		timeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+		if _, err = m.Unlock(timeout); err != nil {
 			logger.WithError(err).Error("error on mutex unlock")
 		}
+		cancel()
 	}()
 
 	// 1. deindex backfill

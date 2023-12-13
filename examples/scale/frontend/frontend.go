@@ -55,14 +55,15 @@ type ticketToWatch struct {
 
 // Run triggers execution of the scale frontend component that creates
 // tickets at scale in Open Match.
-func BindService(p *appmain.Params, b *appmain.Bindings) error {
+func BindService(ctx context.Context, p *appmain.Params, b *appmain.Bindings) error {
 	go run(p.Config())
 
 	return nil
 }
 
 func run(cfg config.View) {
-	conn, err := rpc.GRPCClientFromConfig(cfg, "api.frontend")
+	ctx := context.Background()
+	conn, err := rpc.GRPCClientFromConfig(ctx, cfg, "api.frontend")
 	if err != nil {
 		logger.WithFields(logrus.Fields{
 			"error": err.Error(),

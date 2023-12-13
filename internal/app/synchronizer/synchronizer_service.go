@@ -197,7 +197,7 @@ func (s synchronizerService) register(ctx context.Context) *registration {
 			return <-req.resp
 		case <-s.startCycle:
 			go func() {
-				s.runCycle()
+				s.runCycle(ctx)
 				s.startCycle <- struct{}{}
 			}()
 		}
@@ -207,10 +207,10 @@ func (s synchronizerService) register(ctx context.Context) *registration {
 ///////////////////////////////////////
 ///////////////////////////////////////
 
-func (s *synchronizerService) runCycle() {
+func (s *synchronizerService) runCycle(ctx context.Context) {
 	cst := time.Now()
 	/////////////////////////////////////// Initialize cycle
-	ctx, cancel := contextcause.WithCancelCause(context.Background())
+	ctx, cancel := contextcause.WithCancelCause(ctx)
 
 	m2c := make(chan mAndM7c)
 	m3c := make(chan *pb.Match)

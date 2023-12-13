@@ -15,6 +15,7 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -42,9 +43,10 @@ func TestStartStopServer(t *testing.T) {
 		pb.RegisterFrontendServiceServer(s, ff)
 	}, pb.RegisterFrontendServiceHandlerFromEndpoint)
 	s := &Server{}
-	defer s.Stop()
+	ctx := context.Background()
+	defer s.Stop(ctx)
 
-	err := s.Start(params)
+	err := s.Start(ctx, params)
 	require.Nil(err)
 
 	conn, err := grpc.Dial(fmt.Sprintf(":%s", MustGetPortNumber(grpcL)), grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -97,5 +99,5 @@ func runGrpcWithProxyTests(t *testing.T, require *require.Assertions, s grpcServ
 	require.Equal(200, httpResp.StatusCode)
 	require.Equal("ok", string(body))
 
-	s.stop()
+	s.stop(ctx)
 }

@@ -15,6 +15,7 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -39,8 +40,9 @@ func TestInsecureStartStop(t *testing.T) {
 		pb.RegisterFrontendServiceServer(s, ff)
 	}, pb.RegisterFrontendServiceHandlerFromEndpoint)
 	s := newInsecureServer(grpcL, httpL)
-	defer s.stop()
-	err := s.start(params)
+	ctx := context.Background()
+	defer s.stop(ctx)
+	err := s.start(ctx, params)
 	require.Nil(err)
 
 	conn, err := grpc.Dial(fmt.Sprintf(":%s", MustGetPortNumber(grpcL)), grpc.WithTransportCredentials(insecure.NewCredentials()))

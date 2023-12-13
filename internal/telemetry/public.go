@@ -15,6 +15,7 @@
 package telemetry
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -79,6 +80,6 @@ type Params interface {
 type Bindings interface {
 	TelemetryHandle(pattern string, handler http.Handler)
 	TelemetryHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request))
-	AddCloser(c func())
-	AddCloserErr(c func() error)
+	AddCloser(c func(ctx context.Context))
+	AddCloserErr(c func(ctx context.Context) error)
 }

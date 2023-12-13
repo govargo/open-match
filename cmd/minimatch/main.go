@@ -16,10 +16,13 @@
 package main
 
 import (
+	"context"
+
 	"open-match.dev/open-match/internal/app/minimatch"
 	"open-match.dev/open-match/internal/appmain"
 )
 
 func main() {
-	appmain.RunApplication("minimatch", minimatch.BindService)
+	ctx := context.Background()
+	appmain.RunApplication(ctx, "minimatch", minimatch.BindService)
 }

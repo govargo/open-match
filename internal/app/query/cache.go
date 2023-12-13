@@ -32,6 +32,7 @@ import (
 // cache unifies concurrent requests into a single cache update, and
 // gives a safe view into that map cache.
 type cache struct {
+	ctx      context.Context
 	store    statestore.Service
 	requests chan *cacheRequest
 	// Single item buffered channel.  Holds a value when runQuery can be safely
@@ -42,7 +43,7 @@ type cache struct {
 	// Multithreaded unsafe fields, only to be written by update, and read when
 	// request given the ok.
 	value  interface{}
-	update func(statestore.Service, interface{}) error
+	update func(context.Context, statestore.Service, interface{}) error
 	err    error
 }
 
@@ -63,7 +64,7 @@ sendRequest:
 		case <-ctx.Done():
 			return errors.Wrap(ctx.Err(), "cache request canceled before request sent.")
 		case <-c.startRunRequest:
-			go c.runRequest()
+			go c.runRequest(ctx)
 		case c.requests <- cr:
 			break sendRequest
 		}
@@ -84,7 +85,7 @@ sendRequest:
 	return nil
 }
 
-func (c *cache) runRequest() {
+func (c *cache) runRequest(ctx context.Context) {
 	defer func() {
 		c.startRunRequest <- struct{}{}
 	}()
@@ -103,8 +104,8 @@ collectAllWaiting:
 		}
 	}
 
-	c.err = c.update(c.store, c.value)
-	stats.Record(context.Background(), cacheWaitingQueries.M(int64(len(reqs))))
+	c.err = c.update(c.ctx, c.store, c.value)
+	stats.Record(ctx, cacheWaitingQueries.M(int64(len(reqs))))
 
 	// Send WaitGroup to query calls, letting them run their query on the cache.
 	for _, req := range reqs {
@@ -120,8 +121,9 @@ collectAllWaiting:
 	c.wg.Wait()
 }
 
-func newTicketCache(b *appmain.Bindings, store statestore.Service) *cache {
+func newTicketCache(ctx context.Context, b *appmain.Bindings, store statestore.Service) *cache {
 	c := &cache{
+		ctx:             ctx,
 		store:           store,
 		requests:        make(chan *cacheRequest),
 		startRunRequest: make(chan struct{}, 1),
@@ -135,7 +137,7 @@ func newTicketCache(b *appmain.Bindings, store statestore.Service) *cache {
 	return c
 }
 
-func updateTicketCache(store statestore.Service, value interface{}) error {
+func updateTicketCache(ctx context.Context, store statestore.Service, value interface{}) error {
 	if value == nil {
 		return status.Error(codes.InvalidArgument, "value is required")
 	}
@@ -147,7 +149,7 @@ func updateTicketCache(store statestore.Service, value interface{}) error {
 
 	t := time.Now()
 	previousCount := len(tickets)
-	currentAll, err := store.GetIndexedIDSet(context.Background())
+	currentAll, err := store.GetIndexedIDSet(ctx)
 	if err != nil {
 		return err
 	}
@@ -167,7 +169,7 @@ func updateTicketCache(store statestore.Service, value interface{}) error {
 		}
 	}
 
-	newTickets, err := store.GetTickets(context.Background(), toFetch)
+	newTickets, err := store.GetTickets(ctx, toFetch)
 	if err != nil {
 		return err
 	}
@@ -176,18 +178,19 @@ func updateTicketCache(store statestore.Service, value interface{}) error {
 		tickets[t.Id] = t
 	}
 
-	stats.Record(context.Background(), cacheTotalItems.M(int64(previousCount)))
-	stats.Record(context.Background(), totalActiveTickets.M(int64(len(currentAll))))
-	stats.Record(context.Background(), cacheFetchedItems.M(int64(len(toFetch))))
-	stats.Record(context.Background(), cacheUpdateLatency.M(float64(time.Since(t))/float64(time.Millisecond)))
-	stats.Record(context.Background(), totalPendingTickets.M(int64(len(toFetch))))
+	stats.Record(ctx, cacheTotalItems.M(int64(previousCount)))
+	stats.Record(ctx, totalActiveTickets.M(int64(len(currentAll))))
+	stats.Record(ctx, cacheFetchedItems.M(int64(len(toFetch))))
+	stats.Record(ctx, cacheUpdateLatency.M(float64(time.Since(t))/float64(time.Millisecond)))
+	stats.Record(ctx, totalPendingTickets.M(int64(len(toFetch))))
 
 	logger.Debugf("Ticket Cache update: Previous %d, Deleted %d, Fetched %d, Current %d", previousCount, deletedCount, len(toFetch), len(tickets))
 	return nil
 }
 
-func newBackfillCache(b *appmain.Bindings, store statestore.Service) *cache {
+func newBackfillCache(ctx context.Context, b *appmain.Bindings, store statestore.Service) *cache {
 	c := &cache{
+		ctx:             ctx,
 		store:           store,
 		requests:        make(chan *cacheRequest),
 		startRunRequest: make(chan struct{}, 1),
@@ -201,7 +204,7 @@ func newBackfillCache(b *appmain.Bindings, store statestore.Service) *cache {
 	return c
 }
 
-func updateBackfillCache(store statestore.Service, value interface{}) error {
+func updateBackfillCache(ctx context.Context, store statestore.Service, value interface{}) error {
 	if value == nil {
 		return status.Error(codes.InvalidArgument, "value is required")
 	}
@@ -213,7 +216,7 @@ func updateBackfillCache(store statestore.Service, value interface{}) error {
 
 	t := time.Now()
 	previousCount := len(backfills)
-	index, err := store.GetIndexedBackfills(context.Background())
+	index, err := store.GetIndexedBackfills(ctx)
 	if err != nil {
 		return err
 	}
@@ -234,7 +237,7 @@ func updateBackfillCache(store statestore.Service, value interface{}) error {
 		}
 	}
 
-	fetchedBackfills, err := store.GetBackfills(context.Background(), toFetch)
+	fetchedBackfills, err := store.GetBackfills(ctx, toFetch)
 	if err != nil {
 		return err
 	}
@@ -243,10 +246,10 @@ func updateBackfillCache(store statestore.Service, value interface{}) error {
 		backfills[b.Id] = b
 	}
 
-	stats.Record(context.Background(), cacheTotalItems.M(int64(previousCount)))
-	stats.Record(context.Background(), totalBackfillsTickets.M(int64(len(backfills))))
-	stats.Record(context.Background(), cacheFetchedItems.M(int64(len(toFetch))))
-	stats.Record(context.Background(), cacheUpdateLatency.M(float64(time.Since(t))/float64(time.Millisecond)))
+	stats.Record(ctx, cacheTotalItems.M(int64(previousCount)))
+	stats.Record(ctx, totalBackfillsTickets.M(int64(len(backfills))))
+	stats.Record(ctx, cacheFetchedItems.M(int64(len(toFetch))))
+	stats.Record(ctx, cacheUpdateLatency.M(float64(time.Since(t))/float64(time.Millisecond)))
 
 	logger.Debugf("Backfill Cache update: Previous %d, Deleted %d, Fetched %d, Current %d", previousCount, deletedCount, len(toFetch), len(backfills))
 	return nil

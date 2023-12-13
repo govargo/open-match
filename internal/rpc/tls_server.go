@@ -44,7 +44,7 @@ type tlsServer struct {
 	httpServer   *http.Server
 }
 
-func (s *tlsServer) start(params *ServerParams) error {
+func (s *tlsServer) start(ctx context.Context, params *ServerParams) error {
 	s.httpMux = params.ServeMux
 	s.proxyMux = runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.HTTPBodyMarshaler{
@@ -99,7 +99,7 @@ func (s *tlsServer) start(params *ServerParams) error {
 
 	// Start HTTP server
 	// Bind gRPC handlers
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 
 	httpsToGrpcProxyOptions := newGRPCDialOptions(params.enableMetrics, params.enableRPCLogging, params.enableRPCPayloadLogging)
 	httpsToGrpcProxyOptions = append(httpsToGrpcProxyOptions, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(certPoolForGrpcEndpoint, "")))
@@ -138,9 +138,9 @@ func (s *tlsServer) start(params *ServerParams) error {
 	return nil
 }
 
-func (s *tlsServer) stop() error {
+func (s *tlsServer) stop(ctx context.Context) error {
 	// the servers also close their respective listeners.
-	err := s.httpServer.Shutdown(context.Background())
+	err := s.httpServer.Shutdown(ctx)
 	s.grpcServer.GracefulStop()
 	return err
 }
