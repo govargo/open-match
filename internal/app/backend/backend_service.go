@@ -79,8 +79,8 @@ func (s *backendService) FetchMatches(req *pb.FetchMatchesRequest, stream pb.Bac
 	}
 
 	// The mmf must be canceled if the synchronizer call fails (which will
-	// cancel the context from the error group).  However the synchronizer call
-	// is NOT dependant on the mmf call.
+	// cancel the context from the error group). However, the synchronizer call
+	// is NOT dependent on the mmf call.
 	mmfCtx, cancelMmfs := contextcause.WithCancelCause(ctx)
 	// Closed when mmfs should start.
 	startMmfs := make(chan struct{})
