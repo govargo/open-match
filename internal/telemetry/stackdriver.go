@@ -27,8 +27,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 
-	gcppropagator "github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator"
-
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
@@ -92,9 +90,6 @@ func bindStackDriverMetrics(p Params, b Bindings) error {
 	)
 	otel.SetTextMapPropagator(
 		propagation.NewCompositeTextMapPropagator(
-			// Putting the CloudTraceFormatPropagator first means the TraceContext propagator
-			// takes precedence if both the traceparent and the XCTC headers exist.
-			gcppropagator.CloudTraceFormatPropagator{},
 			propagation.TraceContext{},
 			propagation.Baggage{},
 		))
