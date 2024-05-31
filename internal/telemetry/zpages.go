@@ -15,6 +15,7 @@
 package telemetry
 
 import (
+	"context"
 	"net/http"
 	"net/http/pprof"
 
@@ -27,7 +28,7 @@ const (
 	configNameTelemetryZpagesEnabled = "telemetry.zpages.enable"
 )
 
-func bindZpages(p Params, b Bindings) error {
+func bindZpages(_ context.Context, p Params, b Bindings) error {
 	if !p.Config().GetBool(configNameTelemetryZpagesEnabled) {
 		logger.Info("zPages: Disabled")
 		return nil

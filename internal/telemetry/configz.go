@@ -17,6 +17,7 @@ package telemetry
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -86,7 +87,7 @@ func (cz *configz) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	fmt.Print(s)
 }
 
-func bindConfigz(p Params, b Bindings) error {
+func bindConfigz(_ context.Context, p Params, b Bindings) error {
 	cfg := p.Config()
 	if !cfg.GetBool(configNameTelemetryZpagesEnabled) {
 		return nil

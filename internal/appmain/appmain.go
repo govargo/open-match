@@ -174,7 +174,7 @@ func NewApplication(ctx context.Context, serviceName string, bindService Bind, g
 		sp: sp,
 	}
 
-	err = telemetry.Setup(p, b)
+	err = telemetry.Setup(ctx, p, b)
 	if err != nil {
 		surpressedErr := a.Stop(ctx) // Don't care about additional errors stopping.
 		_ = surpressedErr

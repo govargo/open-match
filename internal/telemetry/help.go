@@ -15,6 +15,7 @@
 package telemetry
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 )
@@ -49,7 +50,7 @@ func newHelp() func(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func bindHelp(p Params, b Bindings) error {
+func bindHelp(_ context.Context, p Params, b Bindings) error {
 	if !p.Config().GetBool(configNameTelemetryZpagesEnabled) {
 		return nil
 	}

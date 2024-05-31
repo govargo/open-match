@@ -33,8 +33,8 @@ var (
 )
 
 // Setup configures the telemetry for the server.
-func Setup(p Params, b Bindings) error {
-	bindings := []func(p Params, b Bindings) error{
+func Setup(ctx context.Context, p Params, b Bindings) error {
+	bindings := []func(ctx context.Context, p Params, b Bindings) error{
 		configureOpenCensus,
 		bindPrometheus,
 		bindStackDriverMetrics,
@@ -45,7 +45,7 @@ func Setup(p Params, b Bindings) error {
 	}
 
 	for _, f := range bindings {
-		err := f(p, b)
+		err := f(ctx, p, b)
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func Setup(p Params, b Bindings) error {
 	return nil
 }
 
-func configureOpenCensus(p Params, b Bindings) error {
+func configureOpenCensus(_ context.Context, p Params, b Bindings) error {
 	// There's no way to undo these options, but the next startup will override
 	// them.
 	periodString := p.Config().GetString("telemetry.reportingPeriod")
