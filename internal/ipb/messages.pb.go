@@ -21,11 +21,12 @@
 package ipb
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	pb "open-match.dev/open-match/pkg/pb"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (

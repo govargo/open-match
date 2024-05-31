@@ -23,7 +23,7 @@ import (
 	"go.opencensus.io/stats/view"
 )
 
-func bindOpenCensusAgent(p Params, b Bindings) error {
+func bindOpenCensusAgent(_ context.Context, p Params, b Bindings) error {
 	cfg := p.Config()
 
 	if !cfg.GetBool("telemetry.opencensusAgent.enable") {

@@ -30,7 +30,7 @@ const (
 	ConfigNameEnableMetrics = "telemetry.prometheus.enable"
 )
 
-func bindPrometheus(p Params, b Bindings) error {
+func bindPrometheus(_ context.Context, p Params, b Bindings) error {
 	cfg := p.Config()
 
 	if !cfg.GetBool("telemetry.prometheus.enable") {
