@@ -16,14 +16,16 @@ package telemetry
 
 import (
 	"context"
+	"os"
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
-	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/stats/view"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 
@@ -69,10 +71,18 @@ func bindStackDriverMetrics(ctx context.Context, p Params, b Bindings) error {
 	}
 
 	// OpenTelemetry setting
-	exporter, err := texporter.New(texporter.WithProjectID(gcpProjectID))
-	if err != nil {
-		return errors.Wrap(err, "Failed to crete new texporter")
+	otelAgentAddr, ok := os.LookupEnv("OTEL_EXPORTER_ENDPOINT")
+	if !ok {
+		otelAgentAddr = "0.0.0.0:4317"
 	}
+	otlptraceClient := otlptracegrpc.NewClient(
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithEndpoint(otelAgentAddr))
+	exporter, err := otlptrace.New(ctx, otlptraceClient)
+	if err != nil {
+		return errors.Wrap(err, "Failed to crete new OTLP span exporter")
+	}
+
 	res, err := resource.New(ctx,
 		// Use the GCP resource detector to detect information about the GCP platform
 		resource.WithDetectors(gcp.NewDetector()),
@@ -101,9 +111,8 @@ func bindStackDriverMetrics(ctx context.Context, p Params, b Bindings) error {
 	otel.SetTracerProvider(tp)
 
 	logger.WithFields(logrus.Fields{
-		"gcpProjectID":     gcpProjectID,
 		"samplingFraction": samplingFraction,
-	}).Info("Cloud Trace: ENABLED")
+	}).Info("OLTP span exporter: ENABLED")
 
 	b.AddCloser(func(ctx context.Context) {
 		// It is imperative to invoke flush before your main function exits
