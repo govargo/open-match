@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 )
 
 var (
@@ -73,7 +73,7 @@ func bindStackDriverMetrics(ctx context.Context, p Params, b Bindings) error {
 	// OpenTelemetry setting
 	otelAgentAddr, ok := os.LookupEnv("OTEL_EXPORTER_ENDPOINT")
 	if !ok {
-		otelAgentAddr = "0.0.0.0:4317"
+		otelAgentAddr = "opentelemetry-collector.tracing.svc.cluster.local.:4317"
 	}
 	otlptraceClient := otlptracegrpc.NewClient(
 		otlptracegrpc.WithInsecure(),
