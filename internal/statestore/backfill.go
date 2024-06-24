@@ -28,6 +28,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"open-match.dev/open-match/internal/config"
 	"open-match.dev/open-match/internal/ipb"
+	"open-match.dev/open-match/internal/telemetry"
 	"open-match.dev/open-match/pkg/pb"
 )
 
@@ -45,6 +46,9 @@ const (
 
 // CreateBackfill creates a new Backfill in the state storage if one doesn't exist. The xids algorithm used to create the ids ensures that they are unique with no system wide synchronization. Calling clients are forbidden from choosing an id during create. So no conflicts will occur.
 func (rb *redisBackend) CreateBackfill(ctx context.Context, backfill *pb.Backfill, ticketIDs []string) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.CreateBackfill")
+	defer span.End()
+
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "CreateBackfill, id: %s, failed to connect to redis: %v", backfill.GetId(), err)
@@ -77,6 +81,9 @@ func (rb *redisBackend) CreateBackfill(ctx context.Context, backfill *pb.Backfil
 
 // GetBackfill gets the Backfill with the specified id from state storage. This method fails if the Backfill does not exist. Returns the Backfill and associated ticketIDs if they exist.
 func (rb *redisBackend) GetBackfill(ctx context.Context, id string) (*pb.Backfill, []string, error) {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.GetBackfill")
+	defer span.End()
+
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return nil, nil, status.Errorf(codes.Unavailable, "GetBackfill, id: %s, failed to connect to redis: %v", id, err)
@@ -110,6 +117,9 @@ func (rb *redisBackend) GetBackfill(ctx context.Context, id string) (*pb.Backfil
 
 // GetBackfills returns multiple backfills from storage
 func (rb *redisBackend) GetBackfills(ctx context.Context, ids []string) ([]*pb.Backfill, error) {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.GetBackfills")
+	defer span.End()
+
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -166,6 +176,9 @@ func (rb *redisBackend) GetBackfills(ctx context.Context, ids []string) ([]*pb.B
 
 // DeleteBackfill removes the Backfill with the specified id from state storage.
 func (rb *redisBackend) DeleteBackfill(ctx context.Context, id string) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.DeleteBackfill")
+	defer span.End()
+
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "DeleteBackfill, id: %s, failed to connect to redis: %v", id, err)
@@ -187,6 +200,9 @@ func (rb *redisBackend) DeleteBackfill(ctx context.Context, id string) error {
 
 // UpdateBackfill updates an existing Backfill with a new data. ticketIDs can be nil.
 func (rb *redisBackend) UpdateBackfill(ctx context.Context, backfill *pb.Backfill, ticketIDs []string) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.UpdateBackfill")
+	defer span.End()
+
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "UpdateBackfill, id: %s, failed to connect to redis: %v", backfill.GetId(), err)
@@ -235,6 +251,9 @@ func isBackfillExpired(conn redis.Conn, id string, ttl time.Duration) (bool, err
 
 // DeleteBackfillCompletely performs a set of operations to remove backfill and all related entities.
 func (rb *redisBackend) DeleteBackfillCompletely(ctx context.Context, id string) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.DeleteBackfillCompletely")
+	defer span.End()
+
 	m := rb.NewMutex(id)
 	err := m.Lock(ctx)
 	if err != nil {
@@ -288,6 +307,9 @@ func (rb *redisBackend) DeleteBackfillCompletely(ctx context.Context, id string)
 }
 
 func (rb *redisBackend) cleanupWorker(ctx context.Context, backfillIDsCh <-chan string, wg *sync.WaitGroup) {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.cleanupWorker")
+	defer span.End()
+
 	var err error
 	for id := range backfillIDsCh {
 		err = rb.DeleteBackfillCompletely(ctx, id)
@@ -303,6 +325,9 @@ func (rb *redisBackend) cleanupWorker(ctx context.Context, backfillIDsCh <-chan 
 
 // CleanupBackfills removes expired backfills
 func (rb *redisBackend) CleanupBackfills(ctx context.Context) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.CleanupBackfills")
+	defer span.End()
+
 	expiredBfIDs, err := rb.GetExpiredBackfillIDs(ctx)
 	if err != nil {
 		return err
@@ -328,6 +353,9 @@ func (rb *redisBackend) CleanupBackfills(ctx context.Context) error {
 // UpdateAcknowledgmentTimestamp stores Backfill's last acknowledgement time.
 // Check on Backfill existence should be performed on Frontend side
 func (rb *redisBackend) UpdateAcknowledgmentTimestamp(ctx context.Context, id string) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.UpdateAcknowledgmentTimestamp")
+	defer span.End()
+
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "UpdateAcknowledgmentTimestamp, id: %s, failed to connect to redis: %v", id, err)
@@ -360,6 +388,9 @@ func doUpdateAcknowledgmentTimestamp(conn redis.Conn, backfillID string) error {
 
 // GetExpiredBackfillIDs gets all backfill IDs which are expired
 func (rb *redisBackend) GetExpiredBackfillIDs(ctx context.Context) ([]string, error) {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.GetExpiredBackfillIDs")
+	defer span.End()
+
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "GetExpiredBackfillIDs, failed to connect to redis: %v", err)
@@ -393,6 +424,9 @@ func (rb *redisBackend) deleteExpiredBackfillID(conn redis.Conn, backfillID stri
 
 // IndexBackfill adds the backfill to the index.
 func (rb *redisBackend) IndexBackfill(ctx context.Context, backfill *pb.Backfill) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.IndexBackfill")
+	defer span.End()
+
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "IndexBackfill, id: %s, failed to connect to redis: %v", backfill.GetId(), err)
@@ -410,6 +444,9 @@ func (rb *redisBackend) IndexBackfill(ctx context.Context, backfill *pb.Backfill
 
 // DeindexBackfill removes specified Backfill ID from the index. The Backfill continues to exist.
 func (rb *redisBackend) DeindexBackfill(ctx context.Context, id string) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.DeindexBackfill")
+	defer span.End()
+
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "DeindexBackfill, id: %s, failed to connect to redis: %v", id, err)
@@ -427,6 +464,9 @@ func (rb *redisBackend) DeindexBackfill(ctx context.Context, id string) error {
 
 // GetIndexedBackfills returns the ids of all backfills currently indexed.
 func (rb *redisBackend) GetIndexedBackfills(ctx context.Context) (map[string]int, error) {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/backfill.GetIndexedBackfills")
+	defer span.End()
+
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "GetIndexedBackfills, failed to connect to redis: %v", err)
