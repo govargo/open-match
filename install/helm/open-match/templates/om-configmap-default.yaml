@@ -34,7 +34,7 @@ data:
       {{- if .Values.global.telemetry.stackdriverMetrics.enabled }}
       format: stackdriver
       {{- else }}
-      format: text
+      format: json
       {{- end }}
       rpc: {{ .Values.global.logging.rpc.enabled }}
     # Open Match applies the exponential backoff strategy for its retryable gRPC calls.
