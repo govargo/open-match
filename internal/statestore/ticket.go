@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"open-match.dev/open-match/internal/config"
+	"open-match.dev/open-match/internal/telemetry"
 	"open-match.dev/open-match/pkg/pb"
 )
 
@@ -36,7 +37,8 @@ const (
 
 // CreateTicket creates a new Ticket in the state storage. If the id already exists, it will be overwritten.
 func (rb *redisBackend) CreateTicket(ctx context.Context, ticket *pb.Ticket) error {
-
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.CreateTicket")
+	defer span.End()
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "CreateTicket, id: %s, failed to connect to redis: %v", ticket.GetId(), err)
@@ -64,6 +66,8 @@ func (rb *redisBackend) CreateTicket(ctx context.Context, ticket *pb.Ticket) err
 
 // GetTicket gets the Ticket with the specified id from state storage. This method fails if the Ticket does not exist.
 func (rb *redisBackend) GetTicket(ctx context.Context, id string) (*pb.Ticket, error) {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.GetTicket")
+	defer span.End()
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "GetTicket, id: %s, failed to connect to redis: %v", id, err)
@@ -99,6 +103,8 @@ func (rb *redisBackend) GetTicket(ctx context.Context, id string) (*pb.Ticket, e
 
 // DeleteTicket removes the Ticket with the specified id from state storage.
 func (rb *redisBackend) DeleteTicket(ctx context.Context, id string) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.DeleteTicket")
+	defer span.End()
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "DeleteTicket, id: %s, failed to connect to redis: %v", id, err)
@@ -120,6 +126,8 @@ func (rb *redisBackend) DeleteTicket(ctx context.Context, id string) error {
 
 // IndexTicket indexes the Ticket id for the configured index fields.
 func (rb *redisBackend) IndexTicket(ctx context.Context, ticket *pb.Ticket) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.IndexTicket")
+	defer span.End()
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "IndexTicket, id: %s, failed to connect to redis: %v", ticket.GetId(), err)
@@ -137,6 +145,8 @@ func (rb *redisBackend) IndexTicket(ctx context.Context, ticket *pb.Ticket) erro
 
 // DeindexTicket removes the indexing for the specified Ticket. Only the indexes are removed but the Ticket continues to exist.
 func (rb *redisBackend) DeindexTicket(ctx context.Context, id string) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.DeindexTicket")
+	defer span.End()
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "DeindexTicket, id: %s, failed to connect to redis: %v", id, err)
@@ -154,6 +164,8 @@ func (rb *redisBackend) DeindexTicket(ctx context.Context, id string) error {
 
 // GetIndexedIds returns the ids of all tickets currently indexed.
 func (rb *redisBackend) GetIndexedIDSet(ctx context.Context) (map[string]struct{}, error) {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.GetIndexedIDSet")
+	defer span.End()
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "GetIndexedIDSet, failed to connect to redis: %v", err)
@@ -190,6 +202,8 @@ func (rb *redisBackend) GetIndexedIDSet(ctx context.Context) (map[string]struct{
 // GetTickets returns multiple tickets from storage.  Missing tickets are
 // silently ignored.
 func (rb *redisBackend) GetTickets(ctx context.Context, ids []string) ([]*pb.Ticket, error) {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.GetTickets")
+	defer span.End()
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -231,6 +245,8 @@ func (rb *redisBackend) GetTickets(ctx context.Context, ids []string) ([]*pb.Tic
 
 // UpdateAssignments update using the request's specified tickets with assignments.
 func (rb *redisBackend) UpdateAssignments(ctx context.Context, req *pb.AssignTicketsRequest) (*pb.AssignTicketsResponse, []*pb.Ticket, error) {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.UpdateAssignments")
+	defer span.End()
 	resp := &pb.AssignTicketsResponse{}
 	if len(req.Assignments) == 0 {
 		return resp, []*pb.Ticket{}, nil
@@ -342,6 +358,8 @@ func (rb *redisBackend) UpdateAssignments(ctx context.Context, req *pb.AssignTic
 
 // GetAssignments returns the assignment associated with the input ticket id
 func (rb *redisBackend) GetAssignments(ctx context.Context, id string, callback func(*pb.Assignment) error) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.GetAssignments")
+	defer span.End()
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "GetAssignments, id: %s, failed to connect to redis: %v", id, err)
@@ -372,6 +390,8 @@ func (rb *redisBackend) GetAssignments(ctx context.Context, id string, callback 
 
 // AddTicketsToPendingRelease appends new proposed tickets to the proposed sorted set with current timestamp
 func (rb *redisBackend) AddTicketsToPendingRelease(ctx context.Context, ids []string) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.AddTicketsToPendingRelease")
+	defer span.End()
 	if len(ids) == 0 {
 		return nil
 	}
@@ -400,6 +420,8 @@ func (rb *redisBackend) AddTicketsToPendingRelease(ctx context.Context, ids []st
 
 // DeleteTicketsFromPendingRelease deletes tickets from the proposed sorted set
 func (rb *redisBackend) DeleteTicketsFromPendingRelease(ctx context.Context, ids []string) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.DeleteTicketsFromPendingRelease")
+	defer span.End()
 	if len(ids) == 0 {
 		return nil
 	}
@@ -426,6 +448,8 @@ func (rb *redisBackend) DeleteTicketsFromPendingRelease(ctx context.Context, ids
 }
 
 func (rb *redisBackend) ReleaseAllTickets(ctx context.Context) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.ReleaseAllTickets")
+	defer span.End()
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "ReleaseAllTickets, failed to connect to redis: %v", err)

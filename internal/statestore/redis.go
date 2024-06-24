@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"open-match.dev/open-match/internal/config"
+	"open-match.dev/open-match/internal/telemetry"
 )
 
 var (
@@ -47,11 +48,15 @@ func (rb *redisBackend) NewMutex(key string) RedisLocker {
 
 // Lock locks r. In case it returns an error on failure, you may retry to acquire the lock by calling this method again.
 func (rb redisBackend) Lock(ctx context.Context) error {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/redis.Lock")
+	defer span.End()
 	return rb.mutex.LockContext(ctx)
 }
 
 // Unlock unlocks r and returns the status of unlock.
 func (rb redisBackend) Unlock(ctx context.Context) (bool, error) {
+	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/redis.Unlock")
+	defer span.End()
 	return rb.mutex.UnlockContext(ctx)
 }
 
