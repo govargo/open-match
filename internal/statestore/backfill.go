@@ -199,7 +199,7 @@ func (rb *redisBackend) UpdateBackfill(ctx context.Context, backfill *pb.Backfil
 	}
 
 	if expired {
-		return status.Errorf(codes.Unavailable, "can not update an expired backfill, id: %s", backfill.Id)
+		return status.Errorf(codes.FailedPrecondition, "can not update an expired backfill, id: %s", backfill.Id)
 	}
 
 	bf := ipb.BackfillInternal{
@@ -340,7 +340,7 @@ func (rb *redisBackend) UpdateAcknowledgmentTimestamp(ctx context.Context, id st
 	}
 
 	if expired {
-		return status.Errorf(codes.Unavailable, "can not acknowledge an expired backfill, id: %s", id)
+		return status.Errorf(codes.FailedPrecondition, "can not acknowledge an expired backfill, id: %s", id)
 	}
 
 	return doUpdateAcknowledgmentTimestamp(redisConn, id)
