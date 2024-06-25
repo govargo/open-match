@@ -230,18 +230,22 @@ global:
         minReplicas: 1
         maxReplicas: 10
         targetCPUUtilizationPercentage: 80
+        targetMemoryUtilizationPercentage: 80
       backend:
         minReplicas: 1
         maxReplicas: 10
         targetCPUUtilizationPercentage: 80
+        targetMemoryUtilizationPercentage: 80
       query:
         minReplicas: 3
         maxReplicas: 10
         targetCPUUtilizationPercentage: 80
+        targetMemoryUtilizationPercentage: 80
       evaluator:
         minReplicas: 1
         maxReplicas: 10
         targetCPUUtilizationPercentage: 80
+        targetMemoryUtilizationPercentage: 80
       matchfunction:
         minReplicas: 1
         maxReplicas: 10
