@@ -66,8 +66,9 @@ func (rb *redisBackend) CreateTicket(ctx context.Context, ticket *pb.Ticket) err
 
 // GetTicket gets the Ticket with the specified id from state storage. This method fails if the Ticket does not exist.
 func (rb *redisBackend) GetTicket(ctx context.Context, id string) (*pb.Ticket, error) {
-	ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.GetTicket")
-	defer span.End()
+	// Disable this trace, because GetTicket is most many called function
+	//ctx, span := telemetry.DefaultTracer.Start(ctx, "statestore/ticket.GetTicket")
+	//defer span.End()
 	redisConn, err := rb.redisPool.GetContext(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "GetTicket, id: %s, failed to connect to redis: %v", id, err)
