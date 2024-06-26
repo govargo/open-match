@@ -153,29 +153,73 @@ readinessProbe:
 {{- define "openmatch.HorizontalPodAutoscaler.frontend.spec.common" -}}
 minReplicas: {{ .Values.global.kubernetes.horizontalPodAutoScaler.frontend.minReplicas }}
 maxReplicas: {{ .Values.global.kubernetes.horizontalPodAutoScaler.frontend.maxReplicas }}
-targetCPUUtilizationPercentage: {{ .Values.global.kubernetes.horizontalPodAutoScaler.frontend.targetCPUUtilizationPercentage }}
-targetMemoryUtilizationPercentage: {{ .Values.global.kubernetes.horizontalPodAutoScaler.frontend.targetMemoryUtilizationPercentage }}
+metrics:
+- type: Resource
+  resource:
+    name: cpu
+    target:
+      type: Utilization
+      averageUtilization: {{ .Values.global.kubernetes.horizontalPodAutoScaler.frontend.targetCPUUtilizationPercentage }}
+- type: Resource
+  resource:
+    name: memory
+    target:
+      type: Utilization
+      averageUtilization: {{ .Values.global.kubernetes.horizontalPodAutoScaler.frontend.targetMemoryUtilizationPercentage }}
 {{- end -}}
 
 {{- define "openmatch.HorizontalPodAutoscaler.backend.spec.common" -}}
 minReplicas: {{ .Values.global.kubernetes.horizontalPodAutoScaler.backend.minReplicas }}
 maxReplicas: {{ .Values.global.kubernetes.horizontalPodAutoScaler.backend.maxReplicas }}
-targetCPUUtilizationPercentage: {{ .Values.global.kubernetes.horizontalPodAutoScaler.backend.targetCPUUtilizationPercentage }}
-targetMemoryUtilizationPercentage: {{ .Values.global.kubernetes.horizontalPodAutoScaler.backend.targetMemoryUtilizationPercentage }}
+metrics:
+- type: Resource
+  resource:
+    name: cpu
+    target:
+      type: Utilization
+      averageUtilization: {{ .Values.global.kubernetes.horizontalPodAutoScaler.backend.targetCPUUtilizationPercentage }}
+- type: Resource
+  resource:
+    name: memory
+    target:
+      type: Utilization
+      averageUtilization: {{ .Values.global.kubernetes.horizontalPodAutoScaler.backend.targetMemoryUtilizationPercentage }}
 {{- end -}}
 
 {{- define "openmatch.HorizontalPodAutoscaler.query.spec.common" -}}
 minReplicas: {{ .Values.global.kubernetes.horizontalPodAutoScaler.query.minReplicas }}
 maxReplicas: {{ .Values.global.kubernetes.horizontalPodAutoScaler.query.maxReplicas }}
-targetCPUUtilizationPercentage: {{ .Values.global.kubernetes.horizontalPodAutoScaler.query.targetCPUUtilizationPercentage }}
-targetMemoryUtilizationPercentage: {{ .Values.global.kubernetes.horizontalPodAutoScaler.query.targetMemoryUtilizationPercentage }}
+metrics:
+- type: Resource
+  resource:
+    name: cpu
+    target:
+      type: Utilization
+      averageUtilization: {{ .Values.global.kubernetes.horizontalPodAutoScaler.query.targetCPUUtilizationPercentage }}
+- type: Resource
+  resource:
+    name: memory
+    target:
+      type: Utilization
+      averageUtilization: {{ .Values.global.kubernetes.horizontalPodAutoScaler.query.targetMemoryUtilizationPercentage }}
 {{- end -}}
 
 {{- define "openmatch.HorizontalPodAutoscaler.evaluator.spec.common" -}}
 minReplicas: {{ .Values.global.kubernetes.horizontalPodAutoScaler.evaluator.minReplicas }}
 maxReplicas: {{ .Values.global.kubernetes.horizontalPodAutoScaler.evaluator.maxReplicas }}
-targetCPUUtilizationPercentage: {{ .Values.global.kubernetes.horizontalPodAutoScaler.evaluator.targetCPUUtilizationPercentage }}
-targetMemoryUtilizationPercentage: {{ .Values.global.kubernetes.horizontalPodAutoScaler.evaluator.targetMemoryUtilizationPercentage }}
+metrics:
+- type: Resource
+  resource:
+    name: cpu
+    target:
+      type: Utilization
+      averageUtilization: {{ .Values.global.kubernetes.horizontalPodAutoScaler.evaluator.targetCPUUtilizationPercentage }}
+- type: Resource
+  resource:
+    name: memory
+    target:
+      type: Utilization
+      averageUtilization: {{ .Values.global.kubernetes.horizontalPodAutoScaler.evaluator.targetMemoryUtilizationPercentage }}
 {{- end -}}
 
 {{- define "openmatch.HorizontalPodAutoscaler.matchfunction.spec.common" -}}
