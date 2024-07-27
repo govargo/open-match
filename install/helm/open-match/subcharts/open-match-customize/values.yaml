@@ -24,6 +24,8 @@ function:
 
 evaluator:
   enabled: false
+  podAnnotations: {}
+  podLabels: {}
   replicas: 3
   portType: ClusterIP
   image: openmatch-default-evaluator
@@ -57,3 +59,19 @@ mmfConfigs:
     mountPath: /app/config/override
     # This will be parsed through the `tpl` function.
     configName: '{{ include "openmatch.configmap.override" . }}'
+
+rollout:
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 0
+
+initContainers: []
+extraVolumes: []
+extraVolumeMounts: []
+lifecycleHooks: {}
+# lifecycleHooks:
+#   preStop:
+#     exec:
+#       command:
+#       - /test/sleep
+#       - "5"

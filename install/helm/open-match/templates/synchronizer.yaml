@@ -53,13 +53,24 @@ spec:
     matchLabels:
       app: {{ template "openmatch.name" . }}
       component: synchronizer
+  strategy:
+    rollingUpdate:
+    {{- with .Values.rollout.rollingUpdate }}
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
   template:
     metadata:
       namespace: {{ .Release.Namespace }}
       annotations:
+        {{- if .Values.synchronizer.podAnnotations }}
+        {{- toYaml .Values.synchronizer.podAnnotations | nindent 8 }}
+        {{- end }}
         {{- include "openmatch.chartmeta" . | nindent 8 }}
         {{- include "prometheus.annotations" (dict "port" .Values.synchronizer.httpPort "prometheus" .Values.global.telemetry.prometheus) | nindent 8 }}
       labels:
+        {{- if .Values.synchronizer.podLabels }}
+        {{- toYaml .Values.synchronizer.podLabels | nindent 8 }}
+        {{- end }}
         app: {{ template "openmatch.name" . }}
         component: synchronizer
         release: {{ .Release.Name }}
@@ -69,13 +80,23 @@ spec:
         {{- include "openmatch.volumes.configs" (. | merge (dict "configs" .Values.configs)) | nindent 8}}
         {{- include "openmatch.volumes.tls" . | nindent 8}}
         {{- include "openmatch.volumes.withredis" . | nindent 8 }}
+        {{- if .Values.extraVolumes }}
+        {{- tpl (toYaml .Values.extraVolumes) . | nindent 8 }}
+        {{- end }}
       serviceAccountName: {{ include "openmatch.serviceAccount.name" . }}
+      {{- if .Values.initContainers }}
+      initContainers:
+        {{- tpl (toYaml .Values.initContainers) . | nindent 8 }}
+      {{- end }}
       containers:
       - name: {{ include "openmatch.synchronizer.hostName" . }}
         volumeMounts:
           {{- include "openmatch.volumemounts.configs" (dict "configs" .Values.configs) | nindent 10 }}
           {{- include "openmatch.volumemounts.tls" . | nindent 10 }}
           {{- include "openmatch.volumemounts.withredis" . | nindent 10}}
+          {{- if .Values.extraVolumeMounts }}
+          {{- tpl (toYaml .Values.extraVolumeMounts) . | nindent 10 }}
+          {{- end }}
         image: "{{ .Values.global.image.registry }}/{{ .Values.synchronizer.image}}:{{ .Values.global.image.tag }}"
         ports:
         - name: grpc
@@ -84,4 +105,8 @@ spec:
           containerPort: {{ .Values.synchronizer.httpPort }}
         {{- include "openmatch.container.common" . | nindent 8 }}
         {{- include "kubernetes.probe" (dict "port" .Values.synchronizer.httpPort "isHTTPS" .Values.global.tls.enabled) | nindent 8 }}
+        {{- if .Values.lifecycleHooks }}
+        lifecycle:
+          {{- toYaml .Values.lifecycleHooks | nindent 10 }}
+        {{- end }}
 {{- end }}
