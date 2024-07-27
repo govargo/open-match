@@ -45,12 +45,16 @@
 #   image: openmatch-query
 swaggerui: &swaggerui
   hostName:
+  podAnnotations: {}
+  podLabels: {}
   httpPort: 51500
   portType: ClusterIP
   replicas: 1
   image: openmatch-swaggerui
 query: &query
   hostName:
+  podAnnotations: {}
+  podLabels: {}
   grpcPort: 50503
   httpPort: 51503
   portType: ClusterIP
@@ -58,6 +62,8 @@ query: &query
   image: openmatch-query
 frontend: &frontend
   hostName:
+  podAnnotations: {}
+  podLabels: {}
   grpcPort: 50504
   httpPort: 51504
   portType: ClusterIP
@@ -65,6 +71,8 @@ frontend: &frontend
   image: openmatch-frontend
 backend: &backend
   hostName:
+  podAnnotations: {}
+  podLabels: {}
   grpcPort: 50505
   httpPort: 51505
   portType: ClusterIP
@@ -72,6 +80,8 @@ backend: &backend
   image: openmatch-backend
 synchronizer: &synchronizer
   hostName:
+  podAnnotations: {}
+  podLabels: {}
   grpcPort: 50506
   httpPort: 51506
   portType: ClusterIP
@@ -87,6 +97,38 @@ function: &function
   grpcPort: 50502
   httpPort: 51502
   replicas: 3
+
+initContainers: []
+  #- name: sleep
+  #image: busybox:1.36-musl
+  #command:
+  #- cp
+  #args:
+  #- /bin/sleep
+  #- /test/sleep
+  #volumeMounts:
+  #- name: test
+  #  mountPath: /test
+
+extraVolumeMounts: []
+  #- name: test
+  #mountPath: /test
+
+extraVolumes: []
+  #- name: test
+  #emptyDir: {}
+
+lifecycleHooks: {}
+  #  preStop:
+  #  exec:
+  #    command:
+  #    - /test/sleep
+  #    - "5"
+
+rollout:
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 0
 
 # Specifies the location and name of the Open Match application-level config volumes.
   # Used in template: `openmatch.volumemounts.configs` and `openmatch.volumes.configs` under `templates/_helpers.tpl` file.

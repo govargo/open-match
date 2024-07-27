@@ -71,13 +71,24 @@ spec:
     matchLabels:
       app: {{ template "openmatch.name" . }}
       component: evaluator
+  strategy:
+    rollingUpdate:
+    {{- with .Values.rollout.rollingUpdate }}
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
   template:
     metadata:
       namespace: {{ .Release.Namespace }}
       annotations:
+        {{- if .Values.evaluator.podAnnotations }}
+        {{- toYaml .Values.evaluator.podAnnotations | nindent 8 }}
+        {{- end }}
         {{- include "prometheus.annotations" (dict "port" .Values.evaluator.httpPort "prometheus" .Values.global.telemetry.prometheus) | nindent 8 }}
         {{- include "openmatch.chartmeta" . | nindent 8 }}
       labels:
+        {{- if .Values.evaluator.podLabels }}
+        {{- toYaml .Values.evaluator.podLabels | nindent 8 }}
+        {{- end }}
         app: {{ template "openmatch.name" . }}
         component: evaluator
         release: {{ .Release.Name }}
@@ -86,12 +97,22 @@ spec:
       volumes:
         {{- include "openmatch.volumes.configs" (. | merge (dict "configs" .Values.evaluatorConfigs)) | nindent 8}}
         {{- include "openmatch.volumes.tls" . | nindent 8}}
+        {{- if .Values.extraVolumes }}
+        {{- tpl (toYaml .Values.extraVolumes) . | nindent 8 }}
+        {{- end }}
       serviceAccountName: {{ include "openmatch.serviceAccount.name" . }}
+      {{- if .Values.initContainers }}
+      initContainers:
+        {{- tpl (toYaml .Values.initContainers) . | nindent 8 }}
+      {{- end }}
       containers:
       - name: {{ include "openmatch.evaluator.hostName" . }}
         volumeMounts:
           {{- include "openmatch.volumemounts.configs" (dict "configs" .Values.evaluatorConfigs) | nindent 10 }}
           {{- include "openmatch.volumemounts.tls" . | nindent 10 }}
+          {{- if .Values.extraVolumeMounts }}
+          {{- tpl (toYaml .Values.extraVolumeMounts) . | nindent 10 }}
+          {{- end }}
         image: "{{ .Values.global.image.registry }}/{{ .Values.evaluator.image}}:{{ .Values.global.image.tag }}"
         ports:
         - name: grpc
@@ -99,5 +120,9 @@ spec:
         - name: http
           containerPort: {{ .Values.evaluator.httpPort }}
         {{- include "openmatch.container.common" . | nindent 8 }}
+        {{- if .Values.lifecycleHooks }}
+        lifecycle:
+          {{- toYaml .Values.lifecycleHooks | nindent 10 }}
+        {{- end }}
 {{- end }}
 

@@ -69,13 +69,24 @@ spec:
     matchLabels:
       app: {{ template "openmatch.name" . }}
       component: backend
+  strategy:
+    rollingUpdate:
+    {{- with .Values.rollout.rollingUpdate }}
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
   template:
     metadata:
       namespace: {{ .Release.Namespace }}
       annotations:
+        {{- if .Values.backend.podAnnotations }}
+        {{- toYaml .Values.backend.podAnnotations | nindent 8 }}
+        {{- end }}
         {{- include "openmatch.chartmeta" . | nindent 8 }}
         {{- include "prometheus.annotations" (dict "port" .Values.backend.httpPort "prometheus" .Values.global.telemetry.prometheus) | nindent 8 }}
       labels:
+        {{- if .Values.backend.podLabels }}
+        {{- toYaml .Values.backend.podLabels | nindent 8 }}
+        {{- end }}
         app: {{ template "openmatch.name" . }}
         component: backend
         release: {{ .Release.Name }}
@@ -85,13 +96,23 @@ spec:
         {{- include "openmatch.volumes.configs" (. | merge (dict "configs" .Values.configs)) | nindent 8}}
         {{- include "openmatch.volumes.tls" . | nindent 8}}
         {{- include "openmatch.volumes.withredis" . | nindent 8}}
+        {{- if .Values.extraVolumes }}
+        {{- tpl (toYaml .Values.extraVolumes) . | nindent 8 }}
+        {{- end }}
       serviceAccountName: {{ include "openmatch.serviceAccount.name" . }}
+      {{- if .Values.initContainers }}
+      initContainers:
+        {{- tpl (toYaml .Values.initContainers) . | nindent 8 }}
+      {{- end }}
       containers:
       - name: {{ include "openmatch.backend.hostName" . }}
         volumeMounts:
           {{- include "openmatch.volumemounts.configs" (dict "configs" .Values.configs) | nindent 10 }}
           {{- include "openmatch.volumemounts.tls" . | nindent 10 }}
           {{- include "openmatch.volumemounts.withredis" . | nindent 10}}
+          {{- if .Values.extraVolumeMounts }}
+          {{- tpl (toYaml .Values.extraVolumeMounts) . | nindent 10 }}
+          {{- end }}
         image: "{{ .Values.global.image.registry }}/{{ .Values.backend.image}}:{{ .Values.global.image.tag }}"
         ports:
         - name: grpc
@@ -100,4 +121,8 @@ spec:
           containerPort: {{ .Values.backend.httpPort }}
         {{- include "openmatch.container.common" . | nindent 8 }}
         {{- include "kubernetes.probe" (dict "port" .Values.backend.httpPort "isHTTPS" .Values.global.tls.enabled) | nindent 8 }}
+        {{- if .Values.lifecycleHooks }}
+        lifecycle:
+          {{- toYaml .Values.lifecycleHooks | nindent 10 }}
+        {{- end }}
 {{- end }}
